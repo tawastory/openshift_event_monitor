@@ -11,7 +11,7 @@ def main():
             api_client.ApiClient(configuration=config.load_kube_config())
         )
 
-        v1_events = client.resources.get(api_version='events.k8s.io/v1', kind='Event')
+        v1_events = client.resources.get(api_version='v1', kind='Event')
 
         event_list = v1_events.get()
 
