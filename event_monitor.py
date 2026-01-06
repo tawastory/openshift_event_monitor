@@ -1,29 +1,15 @@
-from kubernetes import client, config
-from openshift.dynamic import DynamicClient
-import kubernetes.config
+from kubernetes import config, dynamic
+from kubernetes.client import api_client
+
 import traceback
 import sys
 import datetime
 from datetime import timedelta
+import pytz
 from pytz import timezone
 
-def get_client(**kwargs):
-    try:
-        k8s_client = config.new_client_from_config()
-    except config.config_exception.ConfigException:
-        traceback.print_exc()
-        sys.exit(1)
-
-    return DynamicClient(k8s_client)
-
-token_auth = dict(
-    api_key={'authorization': 'Bearer {}'.format('<api-token>')},
-    host='<host>',
-    verify_ssl=False
-)
-
 def check_monitoring_time(event_time):
-    previous_date = datetime.datetime.utcnow() - timedelta(minutes=5)
+    previous_date = datetime.datetime.utcnow() - timedelta(minutes=30)
 
     return event_time > previous_date
 
@@ -31,8 +17,11 @@ nodeEventList = ['NodeNotReady','FailedNodeAllocatableEnforcement','HostPortConf
 
 def main():
     try:
-        client = get_client(**token_auth)
-        v1_events = client.resources.get(api_version='events.k8s.io/v1beta1', kind='Event')
+        client = dynamic.DynamicClient(
+            api_client.ApiClient(configuration=config.load_kube_config())
+        )
+
+        v1_events = client.resources.get(api_version='v1', kind='Event')
 
         event_list = v1_events.get()
 
@@ -43,8 +32,8 @@ def main():
             if check_monitoring_time(converted_date) == True:
                 converted_date_kst = converted_date_utc.astimezone(timezone('Asia/Seoul')).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-                if event.regarding.kind == "Node" and event.reason in nodeEventList:
-                    print(converted_date_kst,"|",event.regarding.kind,"|",event.metadata.name,"|",event.reason,"|",event.note)
+                if event.involvedObject.kind == "Node" and event.reason in nodeEventList:
+                    print(converted_date_kst,"|",event.involvedObject.kind,"|",event.metadata.name,"|",event.reason,"|",event.note)
             
     except Exception as e:
         traceback.print_exc()
