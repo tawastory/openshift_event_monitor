@@ -16,7 +16,7 @@ def main():
         event_list = v1_events.get()
 
         for event in event_list.items:
-            print(event.metadata.creationTimestamp,"|",event.regarding.kind,"|",event.metadata.name,"|",event.reason,"|",event.note)
+            print(event.metadata.creationTimestamp,"|",event.metadata.name,"|",event.reason,"|",event.note)
             
     except Exception as e:
         traceback.print_exc()
